@@ -97,5 +97,11 @@ def upload_to_drive():
         print(f"❌ Error in upload_to_drive: {e}")
         return jsonify({"error": str(e)}), 500
 
+# home route
+@app.route("/")
+def home():
+    return jsonify({"message": "Mircroservice is running"}), 200
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5005, debug=True)
