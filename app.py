@@ -3,22 +3,32 @@ from flask import Flask, request, jsonify
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
-import io
+import io, os, base64, json
+from datetime import datetime
 
 # Initialize Flask app
 app = Flask(__name__)
 
 # Google Drive credentials
-SERVICE_ACCOUNT_FILE = "service_account.json"
+# SERVICE_ACCOUNT_FILE = "service_account.json"
 SCOPES = ['https://www.googleapis.com/auth/drive']
-PARENT_FOLDER_ID = "162XktYfwVNRQ9nGdnFWwDB-UxD21NS8-"
+PARENT_FOLDER_ID = os.getenv("PARENT_FOLDER_ID")
+SECOND_PARENT_FOLDER_ID = os.getenv("SECOND_PARENT_FOLDER_ID")
 
 def authenticate():
     """Authenticate and initialize the Google Drive service."""
     try:
-        creds = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+        # Decode the base64-encoded key
+        encoded_key = os.getenv("GOOGLE_SERVICE_ACCOUNT_KEY")
+        if not encoded_key:
+            raise ValueError("Google Service Account Key is missing.")
+
+        service_account_info = json.loads(base64.b64decode(encoded_key))
+        creds = service_account.Credentials.from_service_account_info(service_account_info)
+        
         service = build("drive", "v3", credentials=creds)
         return service
+
     except Exception as e:
         print(f"❌ Error initializing Google Drive service: {e}")
         return None
@@ -48,7 +58,7 @@ def create_folder(service, parent_id, folder_name):
         return None
 
 @app.route("/api/upload", methods=["POST"])
-def upload_to_drive():
+def upload_ss_drive():
     """API endpoint to upload a file to Google Drive."""
     try:
         # Get request data
@@ -97,6 +107,46 @@ def upload_to_drive():
         print(f"❌ Error in upload_to_drive: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route("/api/upload_extras", methods=["POST"])
+def upload_to_drive():
+    """Uploads a file to Google Drive inside a specific folder."""
+    try:
+        file = request.files.get("file")
+        folder_name = request.form.get("folder_name")
+        employee_name = request.form.get("employee_name")
+        service = authenticate()
+        if not service:
+            raise Exception("Google Drive authentication failed")
+
+        # Create employee and folder structure
+        target_folder_id = create_folder(service, SECOND_PARENT_FOLDER_ID, folder_name)
+        employee_folder_id = create_folder(service, target_folder_id, employee_name)
+
+        # Generate unique filename
+        file_extension = os.path.splitext(file.filename)[1]
+        unique_filename = f"{employee_name}_{datetime.now().strftime('%Y%m%d%H%M%S')}{file_extension}"
+
+        # Prepare file metadata
+        file_metadata = {
+            "name": unique_filename,
+            "parents": [employee_folder_id],
+        }
+
+        # Upload file
+        media = MediaIoBaseUpload(io.BytesIO(file.read()), mimetype=file.content_type)
+        uploaded_file = service.files().create(
+            body=file_metadata, media_body=media, fields="id, webViewLink"
+        ).execute()
+
+        # Return the Google Drive file link
+        return jsonify({
+            "message": "File uploaded successfully",
+            "data": uploaded_file.get("webViewLink")
+        }), 200
+
+    except Exception as e:
+        raise Exception(f"❌ Error uploading to Google Drive: {e}")
+    
 # home route
 @app.route("/")
 def home():
