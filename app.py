@@ -1,4 +1,3 @@
-import tempfile
 from flask import Flask, request, jsonify
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
