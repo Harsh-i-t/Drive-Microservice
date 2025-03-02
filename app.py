@@ -4,6 +4,9 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 import io, os, base64, json
 from datetime import datetime
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Initialize Flask app
 app = Flask(__name__)
