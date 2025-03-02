@@ -56,6 +56,19 @@ def create_folder(service, parent_id, folder_name):
         print(f"❌ Error creating folder '{folder_name}': {e}")
         return None
 
+def make_file_public(service, file_id):
+    """Makes a Google Drive file publicly accessible."""
+    try:
+        permission = {
+            "type": "anyone",
+            "role": "reader"
+        }
+        service.permissions().create(fileId=file_id, body=permission).execute()
+        return f"https://drive.google.com/uc?id={file_id}"
+    except Exception as e:
+        print(f"\u274c Error making file public: {e}")
+        return None
+    
 @app.route("/api/upload", methods=["POST"])
 def upload_ss_drive():
     """API endpoint to upload a file to Google Drive."""
@@ -95,11 +108,12 @@ def upload_ss_drive():
             media_body=media,
             fields="id, webViewLink"
         ).execute()
-
+        file_id = uploaded_file.get("id")
+        public_link = make_file_public(service, file_id)
         # Return the Google Drive file link
         return jsonify({
             "message": "File uploaded successfully",
-            "data": uploaded_file.get("webViewLink")
+            "data": public_link
         }), 200
 
     except Exception as e:
