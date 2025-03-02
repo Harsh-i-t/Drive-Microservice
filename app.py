@@ -161,7 +161,7 @@ def upload_to_drive():
         raise Exception(f"❌ Error uploading to Google Drive: {e}")
     
 # home route
-@app.route("/")
+@app.route("/api/")
 def home():
     return jsonify({"message": "Mircroservice is running"}), 200
 
