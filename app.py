@@ -67,7 +67,8 @@ def make_file_public(service, file_id):
             "role": "reader"
         }
         service.permissions().create(fileId=file_id, body=permission).execute()
-        return f"https://drive.google.com/uc?id={file_id}"
+        return f"https://lh3.googleusercontent.com/d/{file_id}"
+
     except Exception as e:
         print(f"\u274c Error making file public: {e}")
         return None
